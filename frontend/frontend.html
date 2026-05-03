@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual Interior Designer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FAF8F4;
+    --warm-white: #FFFFFF;
+    --charcoal: #1C1C1E;
+    --warm-gray: #6B6762;
+    --light-border: #E8E4DC;
+    --accent: #C4714A;
+    --surface: #F5F2EC;
+    --tag-bg: #EDE9E0;
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--charcoal); height: 100vh; overflow: hidden; }
+  .app-shell { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: 56px 1fr; height: 100vh; }
+
+  /* TOPBAR */
+  .topbar { grid-column: 1 / -1; background: var(--warm-white); border-bottom: 1px solid var(--light-border); display: flex; align-items: center; padding: 0 24px; gap: 12px; }
+  .logo-mark { width: 28px; height: 28px; background: var(--charcoal); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark span { color: #fff; font-size: 12px; font-weight: 600; }
+  .topbar-title { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--charcoal); }
+  .topbar-sub { font-size: 12px; color: var(--warm-gray); }
+  .topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; }
+  .badge-ai { background: #F0EDE6; color: var(--accent); }
+  .badge-def { background: var(--tag-bg); color: var(--warm-gray); }
+  .topbar-note { font-size: 12px; color: var(--warm-gray); margin-left: 6px; }
+
+  /* SIDEBAR */
+  .sidebar { background: var(--warm-white); border-right: 1px solid var(--light-border); overflow-y: auto; padding: 20px 0; }
+  .sb-section { padding: 0 16px 18px; border-bottom: 1px solid var(--light-border); margin-bottom: 18px; }
+  .sb-label { font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--warm-gray); margin-bottom: 10px; }
+
+  .upload-zone { border: 1.5px dashed var(--light-border); border-radius: 12px; padding: 22px 14px; text-align: center; cursor: pointer; background: var(--surface); transition: all 0.2s; }
+  .upload-zone:hover { border-color: var(--accent); background: #FDF7F4; }
+  .upload-icon { width: 34px; height: 34px; background: var(--light-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
+  .upload-icon svg { width: 15px; height: 15px; stroke: var(--warm-gray); fill: none; }
+  .upload-text { font-size: 12px; color: var(--warm-gray); line-height: 1.5; }
+  .upload-text strong { color: var(--charcoal); display: block; font-weight: 500; margin-bottom: 2px; }
+
+  .preview-box { border-radius: 10px; overflow: hidden; position: relative; display: none; }
+  .preview-box img { width: 100%; height: 140px; object-fit: cover; display: block; }
+  .preview-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.4), transparent 50%); display: flex; align-items: flex-end; padding: 8px 10px; }
+  .preview-filename { font-size: 11px; color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .change-btn { position: absolute; top: 8px; right: 8px; font-size: 10px; background: rgba(255,255,255,0.9); border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-weight: 500; }
+
+  .analyze-btn { width: 100%; padding: 10px; background: var(--charcoal); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; }
+  .analyze-btn:hover { background: var(--accent); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .room-select { width: 100%; font-size: 13px; padding: 8px 10px; border: 1px solid var(--light-border); border-radius: 8px; background: var(--surface); color: var(--charcoal); font-family: 'DM Sans', sans-serif; outline: none; }
+  .room-select:focus { border-color: var(--accent); }
+
+  .style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .style-chip { font-size: 12px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--light-border); background: var(--surface); cursor: pointer; text-align: center; color: var(--warm-gray); transition: all 0.15s; }
+  .style-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .style-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 500; }
+
+  .color-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--light-border); cursor: pointer; transition: transform 0.15s; }
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.sel { box-shadow: 0 0 0 2px var(--accent); }
+  .color-lbl { font-size: 11px; color: var(--warm-gray); }
+
+  .budget-row { display: flex; gap: 6px; align-items: center; }
+  .currency { font-size: 12px; color: var(--warm-gray); background: var(--tag-bg); padding: 4px 8px; border-radius: 6px; }
+  .budget-input { flex: 1; font-size: 13px; padding: 7px 10px; border: 1px solid var(--light-border); border-radius: 8px; background: var(--surface); color: var(--charcoal); font-family: 'DM Sans', sans-serif; outline: none; }
+  .budget-input:focus { border-color: var(--accent); }
+
+  /* MAIN */
+  .main-area { display: flex; flex-direction: column; overflow: hidden; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+  .welcome-card { background: var(--warm-white); border: 1px solid var(--light-border); border-radius: 16px; padding: 28px; max-width: 560px; align-self: center; text-align: center; }
+  .welcome-icon { width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 18px; background: linear-gradient(145deg, #F7EFE6, #FFF9F4); border: 1px solid var(--light-border); display: flex; align-items: center; justify-content: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); }
+  .welcome-icon svg { width: 26px; height: 26px; stroke: var(--accent); fill: none; }
+  .welcome-title { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 8px; }
+  .welcome-sub { font-size: 14px; color: var(--warm-gray); line-height: 1.6; margin-bottom: 18px; }
+  .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+  .quick-tile { border: 1px solid var(--light-border); background: var(--surface); border-radius: 14px; padding: 12px 12px 11px; cursor: pointer; text-align: left; transition: all 0.15s ease; min-height: 82px; }
+  .quick-tile:hover { border-color: var(--accent); transform: translateY(-1px); background: #FBF7F2; }
+  .quick-tile-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .quick-ico { width: 28px; height: 28px; border-radius: 9px; background: #fff; border: 1px solid var(--light-border); display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; }
+  .quick-ico svg { width: 15px; height: 15px; stroke: currentColor; fill: none; }
+  .quick-title { font-size: 13px; font-weight: 600; color: var(--charcoal); line-height: 1.2; }
+  .quick-desc { font-size: 11px; color: var(--warm-gray); line-height: 1.45; }
+
+  .msg { display: flex; gap: 8px; align-items: flex-start; max-width: 680px; }
+  .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+  .msg.ai .avatar { background: var(--charcoal); color: #fff; }
+  .msg.user .avatar { background: var(--accent); color: #fff; }
+  .bubble { padding: 11px 15px; border-radius: 12px; font-size: 14px; line-height: 1.65; max-width: 520px; }
+  .msg.ai .bubble { background: var(--warm-white); border: 1px solid var(--light-border); border-radius: 4px 12px 12px 12px; }
+  .msg.user .bubble { background: var(--accent); color: #fff; border-radius: 12px 4px 12px 12px; }
+  .msg-img { width: 110px; height: 85px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 8px; }
+
+  /* ROOM CARD */
+  .room-result-card { background: var(--warm-white); border: 1px solid var(--light-border); border-radius: 14px; overflow: hidden; max-width: 520px; margin-bottom: 4px; }
+
+  /* BEFORE/AFTER SLIDER */
+  .ba-container {
+    position: relative;
+    width: 100%;
+    height: 260px;
+    overflow: hidden;
+    cursor: ew-resize;
+    user-select: none;
+    background: var(--surface);
+  }
+  .ba-before-img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    z-index: 1;
+  }
+  .ba-after-wrap {
+    position: absolute;
+    top: 0; left: 0;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 2;
+  }
+  .ba-after-img {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    /* JS sets exact pixel width so image fills container without squeezing */
+  }
+  .ba-divider {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 3px; height: 100%;
+    background: rgba(255,255,255,0.9);
+    z-index: 10; pointer-events: none;
+  }
+  .ba-handle {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 38px; height: 38px;
+    background: #fff; border-radius: 50%;
+    z-index: 11;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    pointer-events: none;
+    font-size: 15px; color: var(--charcoal);
+  }
+  .ba-label-before, .ba-label-after {
+    position: absolute; bottom: 10px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+    background: rgba(0,0,0,0.55); color: #fff;
+    padding: 3px 9px; border-radius: 10px; pointer-events: none;
+  }
+  .ba-label-before { right: 10px; z-index: 3; }
+  .ba-label-after  { left: 10px;  z-index: 9; }
+
+  /* CARD ACTIONS */
+  .card-actions { padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--light-border); gap: 8px; }
+  .room-card-tag { background: var(--tag-bg); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; color: var(--accent); text-transform: uppercase; }
+  .card-label-text { font-size: 11px; color: var(--warm-gray); }
+  .download-btn { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; padding: 5px 12px; background: var(--surface); border: 1px solid var(--light-border); border-radius: 8px; cursor: pointer; color: var(--charcoal); font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .download-btn:hover { background: var(--charcoal); color: #fff; border-color: var(--charcoal); }
+  .download-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; flex-shrink: 0; }
+  .budget-panel { border: 1px solid #E8DFD0; background: #FCF8F1; border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px; }
+  .budget-panel { position: relative; border: 1px solid #E8DFD0; background: #FCF8F1; border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
+  .budget-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .budget-head strong { font-size: 15px; color: var(--charcoal); }
+  .budget-chip { font-size: 12px; padding: 6px 10px; border-radius: 999px; font-weight: 700; }
+  .budget-chip.ok { background: #E7F5EA; color: #2D7A45; }
+  .budget-chip.warn { background: #FDECEC; color: #B13A3A; }
+  .budget-badge { position: absolute; top: 12px; right: 12px; }
+  .budget-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .budget-metric { background: #fff; border: 1px solid var(--light-border); border-radius: 10px; padding: 12px; display:flex; flex-direction:column; gap:4px; }
+  .budget-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--warm-gray); }
+  .budget-value { font-size: 15px; font-weight: 800; color: var(--charcoal); }
+  .budget-warning { font-size: 13px; color: #9B3F33; line-height: 1.5; }
+  .budget-note { font-size: 12px; color: var(--warm-gray); line-height: 1.45; }
+  .budget-progress { height: 8px; background: #fff; border-radius: 6px; border:1px solid var(--light-border); overflow:hidden; }
+  .budget-progress-fill { height:100%; width:0%; background: var(--accent); transition: width .45s ease; }
+  .budget-breakdown { display: grid; gap: 6px; }
+  .budget-breakdown-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+  .budget-breakdown-row span:first-child { color: var(--warm-gray); }
+  .budget-breakdown-row span:last-child { font-weight: 600; color: var(--charcoal); }
+
+  /* DOTS */
+  .dots { display: flex; gap: 4px; padding: 4px 0; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--light-border); animation: pulse 1.2s ease-in-out infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+
+  /* INPUT */
+  .input-area { padding: 14px 28px 18px; background: var(--warm-white); border-top: 1px solid var(--light-border); }
+  .input-row { display: flex; align-items: flex-end; gap: 10px; background: var(--surface); border: 1px solid var(--light-border); border-radius: 14px; padding: 9px 12px; transition: border-color 0.2s; }
+  .input-row:focus-within { border-color: var(--accent); }
+  #chat-input { flex: 1; background: transparent; border: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--charcoal); resize: none; max-height: 100px; line-height: 1.5; }
+  #chat-input::placeholder { color: var(--warm-gray); }
+  .send-btn { width: 32px; height: 32px; border-radius: 8px; background: var(--charcoal); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
+  .send-btn:hover { background: var(--accent); }
+  .send-btn svg { width: 14px; height: 14px; stroke: #fff; fill: none; }
+  .hint { font-size: 11px; color: var(--warm-gray); text-align: center; margin-top: 6px; opacity: 0.7; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--light-border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="topbar">
+    <div class="logo-mark"><span>VI</span></div>
+    <span class="topbar-title">Virtual Interior</span>
+    <span class="topbar-sub">Designer</span>
+    <div class="topbar-right">
+      <span class="badge badge-ai">Gemini Vision</span>
+      <span class="topbar-note">Minimal room styling workspace</span>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Room Photo</div>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="upload-text">
+          <strong>Upload Room Photo</strong>
+          JPG, PNG — max 10MB
+        </div>
+      </div>
+      <div class="preview-box" id="previewBox">
+        <img id="previewImg" src="" alt="">
+        <div class="preview-overlay">
+          <span class="preview-filename" id="previewName"></span>
+        </div>
+        <button class="change-btn" onclick="document.getElementById('fileInput').click()">Change</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">
+        <span>&#10022;</span> Analyze My Room
+      </button>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Room Type</div>
+      <select class="room-select" id="roomType">
+        <option value="living room">Living Room</option>
+        <option value="bedroom">Bedroom</option>
+        <option value="kitchen">Kitchen</option>
+        <option value="dining room">Dining Room</option>
+        <option value="home office">Home Office</option>
+        <option value="bathroom">Bathroom</option>
+      </select>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Design Style</div>
+      <div class="style-grid">
+        <div class="style-chip" onclick="pickStyle(this,'modern')">Modern</div>
+        <div class="style-chip active" onclick="pickStyle(this,'scandinavian')">Scandinavian</div>
+        <div class="style-chip" onclick="pickStyle(this,'bohemian')">Bohemian</div>
+        <div class="style-chip" onclick="pickStyle(this,'industrial')">Industrial</div>
+        <div class="style-chip" onclick="pickStyle(this,'traditional')">Traditional</div>
+        <div class="style-chip" onclick="pickStyle(this,'japandi')">Japandi</div>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Color Preference</div>
+      <div class="color-row">
+        <div class="swatch sel" style="background:#C4714A" onclick="pickColor(this,'Terracotta')" title="Terracotta"></div>
+        <div class="swatch" style="background:#7A9E7E" onclick="pickColor(this,'Sage')" title="Sage"></div>
+        <div class="swatch" style="background:#C9A84C" onclick="pickColor(this,'Gold')" title="Gold"></div>
+        <div class="swatch" style="background:#5B7FA6" onclick="pickColor(this,'Navy')" title="Navy"></div>
+        <div class="swatch" style="background:#B8A9C9" onclick="pickColor(this,'Lavender')" title="Lavender"></div>
+        <div class="swatch" style="background:#888780" onclick="pickColor(this,'Neutral')" title="Neutral"></div>
+        <span class="color-lbl">Pick tone</span>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Budget</div>
+      <div class="budget-row">
+        <span class="currency">PKR</span>
+        <input type="number" class="budget-input" id="budget" placeholder="e.g. 150000">
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <div class="chat-messages" id="chatMessages">
+      <div class="welcome-card" id="welcomeCard">
+        <div class="welcome-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" stroke-width="1.8">
+            <path d="M3 11.5L12 4l9 7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M5 10.5V20h14v-9.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M9.2 20v-6h5.6v6" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div class="welcome-title">Your AI Interior Designer</div>
+        <div class="welcome-sub">Upload a room photo and get instant furniture suggestions, color palettes, layout ideas — plus an AI-generated Before/After preview!</div>
+        <div class="quick-grid">
+          <button class="quick-tile" onclick="quickSend('What furniture would suit my living room?')">
+            <div class="quick-tile-head">
+              <div class="quick-ico"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 19v-4a2 2 0 012-2h12a2 2 0 012 2v4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 13V9a2 2 0 012-2h8a2 2 0 012 2v4" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div class="quick-title">Furniture ideas</div>
+            </div>
+            <div class="quick-desc">Simple layout and pieces that fit the room.</div>
+          </button>
+          <button class="quick-tile" onclick="quickSend('Suggest a color palette for my bedroom')">
+            <div class="quick-tile-head">
+              <div class="quick-ico"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 12a8 8 0 1116 0c0 2.2-1.8 4-4 4h-2a2 2 0 00-2 2v1" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="9" cy="9" r=".9"></circle><circle cx="15" cy="8" r=".9"></circle><circle cx="16" cy="13" r=".9"></circle><circle cx="10" cy="15" r=".9"></circle></svg></div>
+              <div class="quick-title">Color palette</div>
+            </div>
+            <div class="quick-desc">Warm, neutral, or bold tones for the mood.</div>
+          </button>
+          <button class="quick-tile" onclick="quickSend('How can I make my room look bigger?')">
+            <div class="quick-tile-head">
+              <div class="quick-ico"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M4 8V4h4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M20 8V4h-4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 16v4h4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M20 16v4h-4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M8 12h8" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div class="quick-title">Space tips</div>
+            </div>
+            <div class="quick-desc">Make the room feel open and balanced.</div>
+          </button>
+          <button class="quick-tile" onclick="quickSend('Give me a complete room makeover plan')">
+            <div class="quick-tile-head">
+              <div class="quick-ico"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3l2.2 4.5L19 8l-3.5 3.4.8 4.9L12 14.8 7.7 16.3l.8-4.9L5 8l4.8-.5L12 3z" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div class="quick-title">Full makeover</div>
+            </div>
+            <div class="quick-desc">A clean overall direction to start from.</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea id="chat-input" rows="1" placeholder="Ask about furniture, colors, layout..."
+          onkeydown="handleKey(event)"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        <button class="send-btn" onclick="sendMsg()">
+          <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="hint">AI-powered interior design &middot; Gemini Vision &middot; Before/After Slider &middot; Download Design</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+  var BACKEND_URL = (window.location.protocol === 'file:')
+    ? 'http://127.0.0.1:8000'
+    : window.location.origin;
+
+  var currentStyle = 'scandinavian';
+  var currentColor = 'Terracotta';
+  var uploadedFile = null;
+  var uploadedDataUrl = null;
+  var loading = false;
+
+  // ── FILE UPLOAD ───────────────────────────────────────────
+  document.getElementById('fileInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    uploadedFile = file;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      uploadedDataUrl = ev.target.result;
+      document.getElementById('uploadZone').style.display = 'none';
+      document.getElementById('previewBox').style.display = 'block';
+      document.getElementById('previewImg').src = uploadedDataUrl;
+      document.getElementById('previewName').textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function pickStyle(el, s) {
+    document.querySelectorAll('.style-chip').forEach(function(c) { c.classList.remove('active'); });
+    el.classList.add('active');
+    currentStyle = s;
+  }
+
+  function pickColor(el, c) {
+    document.querySelectorAll('.swatch').forEach(function(s) { s.classList.remove('sel'); });
+    el.classList.add('sel');
+    currentColor = c;
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  }
+
+  function hideWelcome() {
+    var w = document.getElementById('welcomeCard');
+    if (w) w.remove();
+  }
+
+  function quickSend(text) {
+    document.getElementById('chat-input').value = text;
+    sendMsg();
+  }
+
+  function escHtml(t) {
+    return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function formatText(text) {
+    return String(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+  }
+
+  // ── USER MESSAGE ──────────────────────────────────────────
+  function addUserMsg(text, imgUrl) {
+    var msgs = document.getElementById('chatMessages');
+    var div = document.createElement('div');
+    div.className = 'msg user';
+    var imgHtml = imgUrl ? '<img src="' + imgUrl + '" class="msg-img" alt="">' : '';
+    div.innerHTML = '<div class="avatar">You</div><div class="bubble">' + imgHtml + escHtml(text) + '</div>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // ── THINKING ──────────────────────────────────────────────
+  function addThinking() {
+    var msgs = document.getElementById('chatMessages');
+    var div = document.createElement('div');
+    div.className = 'msg ai';
+    div.id = 'thinking';
+    div.innerHTML = '<div class="avatar">AI</div><div class="bubble"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeThinking() {
+    var t = document.getElementById('thinking');
+    if (t) t.remove();
+  }
+
+  // ── BEFORE/AFTER SLIDER ───────────────────────────────────
+  function initSlider(container) {
+    var afterWrap = container.querySelector('.ba-after-wrap');
+    var divider   = container.querySelector('.ba-divider');
+    var handle    = container.querySelector('.ba-handle');
+    var afterImg  = container.querySelector('.ba-after-img');
+    var dragging  = false;
+
+    function syncWidth() {
+      var w = container.getBoundingClientRect().width;
+      if (afterImg) afterImg.style.width = w + 'px';
+    }
+
+    function setPos(clientX) {
+      var rect = container.getBoundingClientRect();
+      var pct  = ((clientX - rect.left) / rect.width) * 100;
+      pct = Math.max(2, Math.min(98, pct));
+      afterWrap.style.width = pct + '%';
+      divider.style.left    = pct + '%';
+      handle.style.left     = pct + '%';
+      syncWidth();
+    }
+
+    container.addEventListener('mousedown', function(e) { dragging = true; setPos(e.clientX); e.preventDefault(); });
+    window.addEventListener('mousemove',    function(e) { if (dragging) setPos(e.clientX); });
+    window.addEventListener('mouseup',      function()  { dragging = false; });
+
+    container.addEventListener('touchstart', function(e) { dragging = true; setPos(e.touches[0].clientX); }, { passive: true });
+    window.addEventListener('touchmove',     function(e) { if (dragging) setPos(e.touches[0].clientX); }, { passive: true });
+    window.addEventListener('touchend',      function()  { dragging = false; });
+
+    requestAnimationFrame(syncWidth);
+    window.addEventListener('resize', syncWidth);
+  }
+
+  // ── DOWNLOAD ──────────────────────────────────────────────
+  function downloadDesign(src) {
+    if (src.startsWith('data:')) {
+      var a = document.createElement('a');
+      a.href = src;
+      a.download = 'ai-room-design.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // Fetch as blob to force download (avoids CORS open-in-tab issue)
+      fetch(src)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url; a.download = 'ai-room-design.png';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
+        })
+        .catch(function() { window.open(src, '_blank'); });
+    }
+  }
+
+  // ── AI MESSAGE ────────────────────────────────────────────
+  function formatPKR(amount) {
+    var value = parseInt(amount, 10) || 0;
+    return 'PKR ' + value.toLocaleString();
+  }
+
+  function addAIMsg(text, imagePrompt, styleLabel, roomLabel, backendImage, budgetInsights) {
+    var msgs    = document.getElementById('chatMessages');
+    var wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-width:520px;';
+
+    var budgetHtml = '';
+    if (budgetInsights && budgetInsights.budget) {
+      var diff = parseInt(budgetInsights.difference, 10) || 0;
+      var isWarn = !!budgetInsights.warning;
+      var breakdown = budgetInsights.breakdown || {};
+      var pct = Math.round((budgetInsights.estimated_cost / Math.max(1, budgetInsights.budget)) * 100);
+      pct = Math.min(500, pct);
+      budgetHtml =
+        '<div class="budget-panel">' +
+          '<div class="budget-head">' +
+            '<strong>Budget Summary</strong>' +
+          '</div>' +
+          '<div class="budget-badge"><span class="budget-chip ' + (isWarn ? 'warn' : 'ok') + '">' + (isWarn ? 'Over budget' : 'Within budget') + '</span></div>' +
+          '<div class="budget-grid">' +
+            '<div class="budget-metric"><div class="budget-label">Budget</div><div class="budget-value">' + formatPKR(budgetInsights.budget) + '</div></div>' +
+            '<div class="budget-metric"><div class="budget-label">Estimated cost</div><div class="budget-value">' + formatPKR(budgetInsights.estimated_cost) + '</div></div>' +
+            '<div class="budget-metric"><div class="budget-label">Difference</div><div class="budget-value">' + (diff >= 0 ? '+' : '-') + ' ' + formatPKR(Math.abs(diff)) + '</div></div>' +
+            '<div class="budget-metric"><div class="budget-label">Status</div><div class="budget-value">' + (isWarn ? 'Needs cuts' : 'Good fit') + '</div></div>' +
+          '</div>' +
+          '<div class="budget-progress" aria-hidden="true"><div class="budget-progress-fill" style="width:' + pct + '%"></div></div>' +
+          (isWarn ? '<div class="budget-warning">Your estimate is above budget. Reduce furniture or decor to fit the target.</div>' : '') +
+          (budgetInsights.note ? '<div class="budget-note">' + escHtml(budgetInsights.note) + '</div>' : '') +
+          '<div class="budget-breakdown">' +
+            Object.keys(breakdown).map(function(key) {
+              return '<div class="budget-breakdown-row"><span>' + escHtml(key) + '</span><span>' + formatPKR(breakdown[key]) + '</span></div>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+    }
+
+    // Determine after-image source
+    var afterSrc;
+    if (backendImage) {
+      afterSrc = 'data:image/png;base64,' + backendImage;
+    } else {
+      var roomType   = document.getElementById('roomType').value;
+      var basePrompt = (imagePrompt && imagePrompt.trim())
+        ? imagePrompt.trim()
+        : currentStyle + ' style ' + roomType + ', ' + currentColor + ' color palette, professional interior design, beautiful furniture, photorealistic';
+      var fullPrompt = basePrompt + ', high quality, 4k, interior photography, natural lighting';
+      afterSrc = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(fullPrompt) + '?width=800&height=450&nologo=true&seed=42';
+    }
+
+    var card = document.createElement('div');
+    card.className = 'room-result-card';
+
+    var uid = 'id' + Date.now() + Math.floor(Math.random() * 1000);
+
+    if (uploadedDataUrl) {
+      // BEFORE / AFTER SLIDER
+      card.innerHTML =
+        '<div class="ba-container" id="sl-' + uid + '">' +
+          '<img class="ba-before-img" src="' + uploadedDataUrl + '" alt="Before">' +
+          '<div class="ba-after-wrap">' +
+            '<img class="ba-after-img" src="' + afterSrc + '" alt="After" ' +
+              'style="opacity:0;transition:opacity 0.5s" ' +
+              'onload="this.style.opacity=\'1\'">' +
+          '</div>' +
+          '<div class="ba-divider"></div>' +
+          '<div class="ba-handle">&#8596;</div>' +
+          '<div class="ba-label-after">AFTER &#10024;</div>' +
+          '<div class="ba-label-before">BEFORE</div>' +
+        '</div>' +
+        '<div class="card-actions">' +
+          '<div style="display:flex;align-items:center;gap:6px;">' +
+            '<span class="room-card-tag">AI Generated</span>' +
+            '<span class="card-label-text">Drag slider to compare</span>' +
+          '</div>' +
+          '<button class="download-btn" id="dl-' + uid + '">' +
+            '<svg viewBox="0 0 24 24" stroke-width="2"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 3v13.5m0 0l-4.5-4.5M12 16.5l4.5-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            ' Download Design' +
+          '</button>' +
+        '</div>';
+
+      wrapper.appendChild(card);
+
+      // Capture afterSrc in closure for download button
+      (function(src, slId, dlId) {
+        requestAnimationFrame(function() {
+          var slEl = document.getElementById(slId);
+          if (slEl) initSlider(slEl);
+          var dlEl = document.getElementById(dlId);
+          if (dlEl) dlEl.addEventListener('click', function() { downloadDesign(src); });
+        });
+      })(afterSrc, 'sl-' + uid, 'dl-' + uid);
+
+    } else {
+      // PLAIN IMAGE (no original uploaded yet)
+      card.innerHTML =
+        '<img src="' + afterSrc + '" alt="AI Generated Room" ' +
+          'style="width:100%;height:220px;object-fit:cover;display:block;opacity:0;transition:opacity 0.5s" ' +
+          'onload="this.style.opacity=\'1\'">' +
+        '<div class="card-actions">' +
+          '<div style="display:flex;align-items:center;gap:6px;">' +
+            '<span class="room-card-tag">AI Generated</span>' +
+            '<span class="card-label-text">' + escHtml(styleLabel || currentStyle) + ' style</span>' +
+          '</div>' +
+          '<button class="download-btn" id="dl-' + uid + '">' +
+            '<svg viewBox="0 0 24 24" stroke-width="2"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 3v13.5m0 0l-4.5-4.5M12 16.5l4.5-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            ' Download Design' +
+          '</button>' +
+        '</div>';
+
+      wrapper.appendChild(card);
+
+      (function(src, dlId) {
+        requestAnimationFrame(function() {
+          var dlEl = document.getElementById(dlId);
+          if (dlEl) dlEl.addEventListener('click', function() { downloadDesign(src); });
+        });
+      })(afterSrc, 'dl-' + uid);
+    }
+
+    // Text bubble
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'msg ai';
+    msgDiv.innerHTML = '<div class="avatar">AI</div><div class="bubble">' +
+      (budgetHtml ? budgetHtml + '<div style="height:10px"></div>' : '') +
+      formatText(text) +
+      '</div>';
+    wrapper.appendChild(msgDiv);
+
+    msgs.appendChild(wrapper);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // ── ANALYZE ───────────────────────────────────────────────
+  async function startAnalysis() {
+    if (loading) return;
+    if (!uploadedFile) {
+      hideWelcome();
+      addAIMsg('Please upload a room photo first! 📸', '', '', '', null);
+      return;
+    }
+    hideWelcome();
+    var roomType   = document.getElementById('roomType').value;
+    var budget     = document.getElementById('budget').value;
+    var budgetText = budget ? 'Budget: PKR ' + parseInt(budget).toLocaleString() : '';
+
+    addUserMsg('Analyze my ' + roomType + ' — ' + currentStyle + ' style, ' + currentColor + ' colors. ' + budgetText, uploadedDataUrl);
+
+    loading = true;
+    document.getElementById('analyzeBtn').disabled = true;
+    addThinking();
+
+    try {
+      var formData = new FormData();
+      formData.append('image',     uploadedFile);
+      formData.append('style',     currentStyle);
+      formData.append('color',     currentColor);
+      formData.append('room_type', roomType);
+      if (budget) formData.append('budget', budget);
+
+      var res = await fetch(BACKEND_URL + '/analyze', { method: 'POST', body: formData });
+      if (!res.ok) { var errData = await res.json(); throw new Error(errData.detail || 'Server error'); }
+
+      var data = await res.json();
+      removeThinking();
+      addAIMsg(data.response || '', data.image_prompt || '', '', '', data.image || null, data.budget_insights || null);
+
+    } catch(err) {
+      removeThinking();
+      addAIMsg('&#9888; Error: ' + escHtml(err.message) + '<br><small>Backend chal raha hai? <code>' + BACKEND_URL + '</code></small>', '', '', '', null);
+    }
+
+    loading = false;
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+
+  // ── CHAT ──────────────────────────────────────────────────
+  async function sendMsg() {
+    var input = document.getElementById('chat-input');
+    var text  = input.value.trim();
+    if (!text || loading) return;
+    input.value = '';
+    input.style.height = 'auto';
+    hideWelcome();
+    addUserMsg(text, null);
+
+    loading = true;
+    addThinking();
+
+    try {
+      var res = await fetch(BACKEND_URL + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message:   text,
+          style:     currentStyle,
+          color:     currentColor,
+          room_type: document.getElementById('roomType').value,
+          budget:    parseInt(document.getElementById('budget').value) || null
+        })
+      });
+
+      if (!res.ok) throw new Error('Server error');
+      var data = await res.json();
+      removeThinking();
+      addAIMsg(data.response || '', data.image_prompt || '', '', '', data.image || null, data.budget_insights || null);
+
+    } catch(err) {
+      removeThinking();
+      addAIMsg('&#9888; Backend se connect nahi ho saka.<br><small>Run: <code>uvicorn backend:app --reload</code></small>', '', '', '', null);
+    }
+
+    loading = false;
+  }
+</script>
+</body>
+</html>

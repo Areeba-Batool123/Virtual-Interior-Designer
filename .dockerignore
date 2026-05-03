@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.git/
+.gitignore
+backend/backenv/
+backend/.env
+backend/session_image.jpg
